@@ -22,7 +22,8 @@ use crate::{
     RecordScheme,
 };
 use snarkvm_algorithms::prelude::*;
-use snarkvm_marlin::marlin::UniversalSRS;
+use snarkvm_fields::ToConstraintField;
+use snarkvm_marlin::{marlin::UniversalSRS, PolynomialCommitment};
 use snarkvm_parameters::{
     testnet2::{NoopProgramSNARKPKParameters, NoopProgramSNARKVKParameters},
     Parameter,
@@ -44,7 +45,13 @@ pub struct NoopProgram<C: Testnet2Components> {
     local_data_commitment_parameters: <C::LocalDataCommitment as CommitmentScheme>::Parameters,
 }
 
-impl<C: Testnet2Components> ProgramScheme for NoopProgram<C> {
+impl<C: Testnet2Components> ProgramScheme for NoopProgram<C>
+where
+    <C::PolynomialCommitment as PolynomialCommitment<C::InnerScalarField>>::VerifierKey:
+        ToConstraintField<C::OuterScalarField>,
+    <C::PolynomialCommitment as PolynomialCommitment<C::InnerScalarField>>::Commitment:
+        ToConstraintField<C::OuterScalarField>,
+{
     type Execution = Execution;
     type ID = Vec<u8>;
     type LocalData = LocalData<C>;
@@ -62,7 +69,7 @@ impl<C: Testnet2Components> ProgramScheme for NoopProgram<C> {
         rng: &mut R,
     ) -> Result<Self, ProgramError> {
         let universal_srs: UniversalSRS<C::InnerScalarField, C::PolynomialCommitment> =
-            ProgramSNARKUniversalSRS::<C>::load()?.0.clone();
+            ProgramSNARKUniversalSRS::<C>::setup(rng)?.0.clone();
 
         let local_data_commitment_parameters = local_data_commitment.parameters().clone();
 

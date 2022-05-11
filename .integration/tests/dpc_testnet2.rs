@@ -677,3 +677,15 @@ fn test_testnet2_dpc_execute_constraints() {
 
     assert!(outer_circuit_cs.is_satisfied());
 }
+
+#[test]
+fn dpc_testnet2_setup_bench() {
+    let rng = &mut ChaChaRng::seed_from_u64(1231275789u64);
+
+    // Generate parameters for the ledger, commitment schemes, and CRH.
+    let crh_parameters = <snarkvm_dpc::testnet2::instantiated::MerkleTreeCRH as CRH>::setup(rng);
+    let merkle_tree_hash_parameters = <CommitmentMerkleParameters as MerkleParameters>::H::from(crh_parameters);
+    let ledger_parameters = Arc::new(From::from(merkle_tree_hash_parameters));
+    let _dpc =
+        <Testnet2DPC as DPCScheme<MerkleTreeLedger<MemDb>>>::setup(&ledger_parameters, rng).expect("DPC setup failed");
+}

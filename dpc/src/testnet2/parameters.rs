@@ -166,9 +166,10 @@ where
 {
     pub fn setup<R: Rng + CryptoRng>(rng: &mut R) -> Result<Self, ProgramError> {
         // TODO (raychu86): CRITICAL - Specify the `num_constraints`, `num_variables`, and `num_non_zero` variables.
-        let num_constraints = 10000;
-        let num_variables = 10000;
-        let num_non_zero = 10000;
+        // TODO: (alex) change these parameters according to noop_program
+        let num_constraints = 1 << 15;
+        let num_variables = 1 << 15;
+        let num_non_zero = 50000;
 
         // TODO (raychu86): Handle this unwrap.
         Ok(Self(
