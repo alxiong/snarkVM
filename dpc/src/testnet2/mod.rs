@@ -569,6 +569,7 @@ where
             C::InnerSNARK::prove(&inner_snark_parameters, &circuit, rng)?
         };
 
+        // // TODO: (alex) remove this when benchmarking
         // Verify that the inner proof passes
         {
             let input = InnerCircuitVerifierInput {
@@ -626,6 +627,23 @@ where
 
             C::OuterSNARK::prove(&outer_snark_parameters, &circuit, rng)?
         };
+
+        // TODO: (alex) remove this when benchmarking
+        // Verify that the outer proof passes
+        {
+            let input = OuterCircuitVerifierInput {
+                program_verification_key_commitment: self.system_parameters.program_verification_key_commitment.clone(),
+                program_verification_key_crh: self.system_parameters.program_verification_key_crh.clone(),
+                program_commitment: program_commitment.clone(),
+                local_data_root: local_data_root.clone(),
+            };
+
+            assert!(C::OuterSNARK::verify(
+                &self.outer_snark_parameters.1,
+                &input,
+                &outer_proof
+            )?);
+        }
 
         let transaction = Self::Transaction::new(
             old_serial_numbers,

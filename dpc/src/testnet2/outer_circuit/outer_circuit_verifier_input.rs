@@ -107,8 +107,9 @@ where
 
         // v.extend_from_slice(&self.inner_snark_verifier_input.program_commitment.to_field_elements()?);
         // v.extend_from_slice(&self.inner_circuit_id.to_field_elements()?);
+
         v.extend_from_slice(&ToConstraintField::<C::OuterScalarField>::to_field_elements(
-            self.local_data_root.to_bytes_le()?.as_slice(),
+            self.local_data_root.to_field_elements()?.to_bytes_le()?.as_slice(),
         )?);
         v.extend_from_slice(&self.program_commitment.to_field_elements()?);
         Ok(v)

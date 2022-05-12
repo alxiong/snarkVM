@@ -280,12 +280,10 @@ where
     //     )?);
     // }
 
-    // NOTE: (alex) program commitment is later added to public input again, so
-    // skipping this one which is meant for inner_snark_verifier_input.
     // let program_commitment_fe_bytes = field_element_to_bytes::<C, _>(cs, program_commitment_fe, "program commitment")?;
     // let memo_fe_bytes = field_element_to_bytes::<C, _>(cs, memo_fe, "memo")?;
     // let network_id_fe_bytes = field_element_to_bytes::<C, _>(cs, network_id_fe, "network id")?;
-    let _local_data_root_fe_bytes = field_element_to_bytes::<C, _>(cs, local_data_root_fe.clone(), "local data root")?;
+    let local_data_root_fe_bytes = field_element_to_bytes::<C, _>(cs, local_data_root_fe.clone(), "local data root")?;
     // let value_balance_fe_bytes = field_element_to_bytes::<C, _>(cs, value_balance_fe, "value balance")?;
 
     // // Construct inner snark input as bytes
