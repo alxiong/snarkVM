@@ -132,3 +132,13 @@ print-trace = [ "snarkvm-profiler/print-trace" ]
 full = [ "testnet1", "testnet2" ]
 testnet1 = [ "snarkvm-r1cs" ]
 testnet2 = [ "snarkvm-r1cs" ]
+parallel = [
+  "full",
+  "snarkvm-algorithms/parallel",
+  "snarkvm-curves/default",
+  "snarkvm-fields/default",
+  "snarkvm-gadgets/default",
+  "snarkvm-marlin/parallel",
+  "snarkvm-parameters/default",
+  "snarkvm-utilities/default"
+]

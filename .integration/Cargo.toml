@@ -28,6 +28,7 @@ version = "0.7.9"
 [dependencies.snarkvm-dpc]
 path = "../dpc"
 version = "0.7.9"
+features = ["parallel"]
 
 [dependencies.snarkvm-fields]
 path = "../fields"

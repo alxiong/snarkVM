@@ -824,12 +824,12 @@ where
         ) {
             Ok(is_valid) => {
                 if !is_valid {
-                    eprintln!("Transaction proof failed to verify.");
+                    eprintln!("Outer proof failed to verify.");
                     return false;
                 }
             }
             _ => {
-                eprintln!("Unable to verify transaction proof.");
+                eprintln!("Unable to verify outer proof.");
                 return false;
             }
         }

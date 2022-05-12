@@ -67,6 +67,11 @@ impl<C: Testnet2Components> ConstraintSynthesizer<C::InnerScalarField> for NoopC
                 || Ok(self.local_data_commitment_parameters.clone()),
             )?;
 
+        let _local_data_root_gadget = <C::LocalDataCRHGadget as CRHGadget<_, _>>::OutputGadget::alloc_input(
+            &mut cs.ns(|| "Allocate local data root"),
+            || Ok(local_data_root),
+        )?;
+
         // artificially drive up constraint number to around 2^15 by
         // adding some primtive gadget that always satisify without using any local data, for benchmarking purpose only
         let rng = &mut snarkvm_utilities::test_rng();
@@ -114,11 +119,6 @@ impl<C: Testnet2Components> ConstraintSynthesizer<C::InnerScalarField> for NoopC
                 )
                 .unwrap();
         }
-
-        let _local_data_root_gadget = <C::LocalDataCRHGadget as CRHGadget<_, _>>::OutputGadget::alloc_input(
-            &mut cs.ns(|| "Allocate local data root"),
-            || Ok(local_data_root),
-        )?;
 
         // more aribtrary increase in constraint, get closer to 2^15
         for i in cs.num_constraints()..(1 << 15) {
