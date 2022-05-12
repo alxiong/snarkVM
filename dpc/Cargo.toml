@@ -56,7 +56,7 @@ default-features = false
 path = "../profiler"
 version = "0.7.9"
 default-features = false
-features = ["print-trace"]
+# features = ["print-trace"]
 
 [dependencies.snarkvm-r1cs]
 path = "../r1cs"

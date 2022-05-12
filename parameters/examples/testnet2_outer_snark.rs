@@ -30,6 +30,8 @@ use snarkvm_dpc::{
     DPCError,
     ProgramScheme,
 };
+use snarkvm_fields::ToConstraintField;
+use snarkvm_marlin::PolynomialCommitment;
 use snarkvm_parameters::{
     testnet2::{InnerSNARKPKParameters, InnerSNARKVKParameters},
     traits::Parameter,
@@ -43,7 +45,13 @@ use std::{path::PathBuf, sync::Arc};
 mod utils;
 use utils::store;
 
-pub fn setup<C: Testnet2Components>() -> Result<(Vec<u8>, Vec<u8>), DPCError> {
+pub fn setup<C: Testnet2Components>() -> Result<(Vec<u8>, Vec<u8>), DPCError>
+where
+    <C::PolynomialCommitment as PolynomialCommitment<C::InnerScalarField>>::VerifierKey:
+        ToConstraintField<C::OuterScalarField>,
+    <C::PolynomialCommitment as PolynomialCommitment<C::InnerScalarField>>::Commitment:
+        ToConstraintField<C::OuterScalarField>,
+{
     let rng = &mut thread_rng();
     let system_parameters = Arc::new(SystemParameters::<C>::load()?);
 
@@ -71,9 +79,9 @@ pub fn setup<C: Testnet2Components>() -> Result<(Vec<u8>, Vec<u8>), DPCError> {
     let outer_snark_parameters = C::OuterSNARK::setup(
         &OuterCircuit::blank(
             system_parameters,
-            ledger_merkle_tree_parameters,
-            inner_snark_vk,
-            inner_snark_proof,
+            // ledger_merkle_tree_parameters,
+            // inner_snark_vk,
+            // inner_snark_proof,
             noop_program.execute_blank(rng)?,
         ),
         rng,

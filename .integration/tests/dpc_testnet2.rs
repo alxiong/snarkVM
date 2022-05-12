@@ -74,13 +74,22 @@ fn test_testnet2_inner_circuit_sanity_check() {
     assert_eq!(expected_testnet2_inner_circuit_id, candidate_testnet2_inner_circuit_id);
 }
 
-#[ignore]
+// #[ignore]
 #[test]
 fn dpc_testnet2_integration_test() {
     let mut rng = ChaChaRng::seed_from_u64(1231275789u64);
 
-    // Generate or load parameters for the ledger, commitment schemes, and CRH.
-    let (ledger_parameters, dpc) = setup_or_load_parameters::<_, MemDb>(false, &mut rng);
+    // // Generate or load parameters for the ledger, commitment schemes, and CRH.
+    // let (ledger_parameters, dpc) = setup_or_load_parameters::<_, MemDb>(false, &mut rng);
+
+    // NOTE: (alex) All setup procedures freshly generates public parameters instead of loading from files.
+    // Generate parameters for the ledger, commitment schemes, and CRH.
+    let crh_parameters = <snarkvm_dpc::testnet2::instantiated::MerkleTreeCRH as CRH>::setup(&mut rng);
+    let merkle_tree_hash_parameters = <CommitmentMerkleParameters as MerkleParameters>::H::from(crh_parameters);
+    let ledger_parameters = Arc::new(From::from(merkle_tree_hash_parameters));
+    // Setup DPC scheme (dominated by SNARK setup for inner, program and outer circuits)
+    let dpc = <Testnet2DPC as DPCScheme<MerkleTreeLedger<MemDb>>>::setup(&ledger_parameters, &mut rng)
+        .expect("DPC setup failed");
 
     // Generate accounts.
     let [genesis_account, recipient, _] = generate_test_accounts::<_, MemDb>(&dpc, &mut rng);
@@ -597,13 +606,13 @@ fn test_testnet2_dpc_execute_constraints() {
     let inner_snark_vk: <<Components as Testnet2Components>::InnerSNARK as SNARK>::VerifyingKey =
         inner_snark_parameters.1.clone().into();
 
-    let inner_snark_id = <Components as DPCComponents>::InnerCircuitIDCRH::hash(
+    let _inner_snark_id = <Components as DPCComponents>::InnerCircuitIDCRH::hash(
         &system_parameters.inner_circuit_id_crh,
         &to_bytes_le![inner_snark_vk].unwrap(),
     )
     .unwrap();
 
-    let inner_snark_proof = <Components as Testnet2Components>::InnerSNARK::prove(
+    let _inner_snark_proof = <Components as Testnet2Components>::InnerSNARK::prove(
         &inner_snark_parameters.0,
         &InnerCircuit::new(
             system_parameters.clone(),
@@ -637,21 +646,21 @@ fn test_testnet2_dpc_execute_constraints() {
     execute_outer_circuit::<_, _>(
         &mut outer_circuit_cs.ns(|| "Outer circuit"),
         &system_parameters,
-        ledger.parameters(),
-        &ledger_digest,
-        &old_serial_numbers,
-        &new_commitments,
-        &new_encrypted_record_hashes,
-        &memorandum,
-        value_balance,
-        network_id,
-        &inner_snark_vk,
-        &inner_snark_proof,
+        // ledger.parameters(),
+        // &ledger_digest,
+        // &old_serial_numbers,
+        // &new_commitments,
+        // &new_encrypted_record_hashes,
+        // &memorandum,
+        // value_balance,
+        // network_id,
+        // &inner_snark_vk,
+        // &inner_snark_proof,
         &program_proofs,
         &program_commitment,
         &program_randomness,
         &local_data_root,
-        &inner_snark_id,
+        // &inner_snark_id,
     )
     .unwrap();
 
@@ -682,10 +691,12 @@ fn test_testnet2_dpc_execute_constraints() {
 fn dpc_testnet2_setup_bench() {
     let rng = &mut ChaChaRng::seed_from_u64(1231275789u64);
 
+    // NOTE: All setup procedures freshly generates public parameters instead of loading from files.
     // Generate parameters for the ledger, commitment schemes, and CRH.
     let crh_parameters = <snarkvm_dpc::testnet2::instantiated::MerkleTreeCRH as CRH>::setup(rng);
     let merkle_tree_hash_parameters = <CommitmentMerkleParameters as MerkleParameters>::H::from(crh_parameters);
     let ledger_parameters = Arc::new(From::from(merkle_tree_hash_parameters));
+    // Setup DPC scheme (dominated by SNARK setup for inner, program and outer circuits)
     let _dpc =
         <Testnet2DPC as DPCScheme<MerkleTreeLedger<MemDb>>>::setup(&ledger_parameters, rng).expect("DPC setup failed");
 }
