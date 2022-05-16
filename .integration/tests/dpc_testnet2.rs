@@ -34,6 +34,7 @@ use snarkvm_dpc::{
         TransactionKernel,
     },
 };
+use snarkvm_gadgets::to_bytes;
 use snarkvm_integration::{ledger::*, memdb::MemDb, storage::*, testnet2::*};
 use snarkvm_r1cs::{ConstraintSystem, TestConstraintSystem};
 use snarkvm_utilities::{to_bytes_le, FromBytes, ToBytes};
@@ -43,7 +44,7 @@ use rand::SeedableRng;
 use rand_chacha::ChaChaRng;
 use std::{
     sync::Arc,
-    time::{SystemTime, UNIX_EPOCH},
+    time::{Instant, SystemTime, UNIX_EPOCH},
 };
 
 type L = Ledger<Testnet2Transaction, CommitmentMerkleParameters, MemDb>;
@@ -168,6 +169,8 @@ fn dpc_testnet2_integration_test() {
         );
     }
 
+    let execute = Instant::now();
+
     // Offline execution to generate a DPC transaction kernel.
     let memo = [4u8; 32];
     let transaction_kernel = <Testnet2DPC as DPCScheme<L>>::execute_offline_phase(
@@ -180,6 +183,8 @@ fn dpc_testnet2_integration_test() {
     )
     .unwrap();
 
+    let program_gen = Instant::now();
+
     // Generate the program proofs
     let mut program_proofs = vec![];
     for i in 0..Components::NUM_TOTAL_RECORDS {
@@ -189,10 +194,26 @@ fn dpc_testnet2_integration_test() {
                 .unwrap(),
         );
     }
+    println!(
+        "⏱️ All {} program proof gen takes: {} ms",
+        Components::NUM_TOTAL_RECORDS,
+        program_gen.elapsed().as_millis()
+    );
 
     let (new_records, transaction) = dpc
         .execute_online_phase(&old_private_keys, transaction_kernel, program_proofs, &ledger, &mut rng)
         .unwrap();
+    println!("⏱️ DPC::Execute takes: {} ms", execute.elapsed().as_millis());
+    {
+        let inner_proof_bytes = to_bytes_le!(transaction.transaction_proof.0).unwrap();
+        let outer_proof_bytes = to_bytes_le!(transaction.transaction_proof.1).unwrap();
+        println!(
+            "ℹ️️ total proof size: {} + {} = {} bytes",
+            inner_proof_bytes.len(),
+            outer_proof_bytes.len(),
+            inner_proof_bytes.len() + outer_proof_bytes.len()
+        );
+    }
 
     // Check that the transaction is serialized and deserialized correctly
     let transaction_bytes = to_bytes_le![transaction].unwrap();
@@ -249,7 +270,9 @@ fn dpc_testnet2_integration_test() {
         proof: ProofOfSuccinctWork([0u8; 972]),
     };
 
+    let now = Instant::now();
     assert!(dpc.verify_transactions(&transactions.0, &ledger));
+    println!("⏱️ DPC::Verify takes: {} ms", now.elapsed().as_millis());
 
     let block = Block { header, transactions };
 
