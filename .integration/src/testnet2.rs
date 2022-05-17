@@ -26,7 +26,7 @@ use std::sync::Arc;
 pub type MerkleTreeLedger<S> = Ledger<Testnet2Transaction, CommitmentMerkleParameters, S>;
 
 pub fn setup_or_load_parameters<R: Rng + CryptoRng, S: Storage>(
-    verify_only: bool,
+    _verify_only: bool,
     rng: &mut R,
 ) -> (Arc<CommitmentMerkleParameters>, Testnet2DPC) {
     // TODO (howardwu): Resolve this inconsistency on import structure with a new model once MerkleParameters are refactored.

@@ -1266,7 +1266,7 @@ where
 
         let mut old_record_commitment_bytes = vec![];
         let mut input_bytes = vec![];
-        for i in 0..C::NUM_INPUT_RECORDS {
+        for i in 0..2 {
             let mut cs = cs.ns(|| format!("Construct local data with input record {}", i));
 
             input_bytes.extend_from_slice(&old_serial_numbers_gadgets[i].to_bytes(&mut cs.ns(|| "old_serial_number"))?);
@@ -1297,7 +1297,7 @@ where
 
         let mut new_record_commitment_bytes = Vec::new();
         let mut input_bytes = vec![];
-        for j in 0..C::NUM_OUTPUT_RECORDS {
+        for j in 0..2 {
             let mut cs = cs.ns(|| format!("Construct local data with output record {}", j));
 
             input_bytes
@@ -1333,7 +1333,7 @@ where
         let inner2_commitment_hash = LocalDataCRHGadget::check_evaluation_gadget(
             cs.ns(|| "Compute to local data commitment inner2 hash"),
             &local_data_crh_parameters,
-            new_record_commitment_bytes,
+            new_record_commitment_bytes.clone(),
         )?;
 
         let mut inner_commitment_hash_bytes = Vec::new();
@@ -1357,6 +1357,80 @@ where
             &mut cs.ns(|| "Check that local data root is valid"),
             &declared_local_data_root,
         )?;
+
+        {
+            // FIXME: (alex) temp hack for benchmarking 2-in-2-out to 4-in-4-out
+            let mut input_bytes = vec![];
+            match (C::NUM_INPUT_RECORDS, C::NUM_OUTPUT_RECORDS) {
+                (2, 2) => {
+                    // local data root is already correctly and sufficiently checked above
+                    // thus do nothing
+                }
+                (3, 3) => {
+                    // need one extra inner commitment
+                    let mut cs = cs.ns(|| format!("SIMULATE: Construct local data with output record {}", 0));
+
+                    input_bytes.extend_from_slice(
+                        &new_record_commitments_gadgets[0].to_bytes(&mut cs.ns(|| "record_commitment"))?,
+                    );
+                    input_bytes.extend_from_slice(&memo);
+                    input_bytes.extend_from_slice(&network_id);
+
+                    let commitment_randomness = LocalDataCommitmentGadget::RandomnessGadget::alloc(
+                        cs.ns(|| format!("SIMULATE: Allocate new record local data commitment randomness {}", 0)),
+                        || Ok(&local_data_commitment_randomizers[C::NUM_INPUT_RECORDS]),
+                    )?;
+
+                    let _commitment = LocalDataCommitmentGadget::check_commitment_gadget(
+                        cs.ns(|| format!("SIMULATE: Commit to new record local data {}", 0)),
+                        &local_data_commitment_parameters,
+                        &input_bytes,
+                        &commitment_randomness,
+                    )?;
+                    input_bytes.clear();
+
+                    // and one extra hash
+                    let _ = LocalDataCRHGadget::check_evaluation_gadget(
+                        cs.ns(|| "SIMULATE: the third pair leaves commitment hash"),
+                        &local_data_crh_parameters,
+                        new_record_commitment_bytes,
+                    )?;
+                }
+                (4, 4) => {
+                    // need two extra inner commitment and two extra hashes
+                    for _ in 0..2 {
+                        let mut cs = cs.ns(|| format!("SIMULATE: Construct local data with output record {}", 0));
+
+                        input_bytes.extend_from_slice(
+                            &new_record_commitments_gadgets[0].to_bytes(&mut cs.ns(|| "record_commitment"))?,
+                        );
+                        input_bytes.extend_from_slice(&memo);
+                        input_bytes.extend_from_slice(&network_id);
+
+                        let commitment_randomness = LocalDataCommitmentGadget::RandomnessGadget::alloc(
+                            cs.ns(|| format!("SIMULATE: Allocate new record local data commitment randomness {}", 0)),
+                            || Ok(&local_data_commitment_randomizers[C::NUM_INPUT_RECORDS]),
+                        )?;
+
+                        let _commitment = LocalDataCommitmentGadget::check_commitment_gadget(
+                            cs.ns(|| format!("SIMULATE: Commit to new record local data {}", 0)),
+                            &local_data_commitment_parameters,
+                            &input_bytes,
+                            &commitment_randomness,
+                        )?;
+                        input_bytes.clear();
+
+                        let _ = LocalDataCRHGadget::check_evaluation_gadget(
+                            cs.ns(|| "SIMULATE: the third pair leaves commitment hash"),
+                            &local_data_crh_parameters,
+                            new_record_commitment_bytes.clone(),
+                        )?;
+                    }
+                }
+                _ => panic!("Only support 2x2, 3x3, 4x4 transactions."),
+            }
+        }
+        // if C::NUM_INPUT_RECORDS
     }
     // *******************************************************************
 

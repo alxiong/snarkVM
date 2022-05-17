@@ -100,8 +100,10 @@ impl DPCComponents for Components {
     
     type EncryptedRecordCRH = BoweHopwoodPedersenCompressedCRH<EdwardsBls12, 48, 44>;
     type EncryptedRecordCRHGadget = BoweHopwoodPedersenCompressedCRHGadget<EdwardsBls12, Self::InnerScalarField, EdwardsBls12Gadget>;
-    
-    type InnerCircuitIDCRH = BoweHopwoodPedersenCompressedCRH<EdwardsBW6, 296, 63>;
+
+    // Due to increase in size of inner_snark_vk which contains the public input which
+    // further contains the input serial numbers and output record commitments.
+    type InnerCircuitIDCRH = BoweHopwoodPedersenCompressedCRH<EdwardsBW6, { 196 + 50 * Self::NUM_TOTAL_RECORDS }, 63>;
     type InnerCircuitIDCRHGadget = BoweHopwoodPedersenCompressedCRHGadget<EdwardsBW6, Self::OuterScalarField, EdwardsBW6Gadget>;
     
     type LocalDataCRH = BoweHopwoodPedersenCompressedCRH<EdwardsBls12, 16, 32>;

@@ -21,7 +21,7 @@ use rand::Rng;
 use std::{fmt::Debug, hash::Hash};
 
 pub trait CommitmentScheme: Sized + Clone + From<<Self as CommitmentScheme>::Parameters> {
-    type Output: Clone + Debug + Default + Eq + Hash + ToBytes + FromBytes + Sync + Send;
+    type Output: Clone + Copy + Debug + Default + Eq + Hash + ToBytes + FromBytes + Sync + Send;
     type Parameters: Clone + Debug + Eq + ToBytes + FromBytes;
     type Randomness: Clone + Debug + Default + Eq + UniformRand + ToBytes + FromBytes;
 

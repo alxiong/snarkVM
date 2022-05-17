@@ -371,6 +371,9 @@ where
             local_data_commitment_randomizers.push(commitment_randomness);
         }
 
+        // TODO: (alex) currently even for NUM_INPUT_RECORDS = 2..=4, we don't change
+        // this local_data_merkle_tree, we simulate (manually drive up the constraints required)
+        // in the inner circuit as a quick hack for benchmark purpose
         let leaves = [
             old_record_commitments[0].clone(),
             old_record_commitments[1].clone(),
