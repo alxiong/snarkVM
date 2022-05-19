@@ -28,7 +28,7 @@ use snarkvm_parameters::{
     testnet2::{NoopProgramSNARKPKParameters, NoopProgramSNARKVKParameters},
     Parameter,
 };
-use snarkvm_utilities::{to_bytes_le, FromBytes, ToBytes};
+use snarkvm_utilities::{to_bytes_le, CanonicalSerialize, FromBytes, ToBytes};
 
 use rand::{CryptoRng, Rng};
 
@@ -70,6 +70,10 @@ where
     ) -> Result<Self, ProgramError> {
         let universal_srs: UniversalSRS<C::InnerScalarField, C::PolynomialCommitment> =
             ProgramSNARKUniversalSRS::<C>::setup(rng)?.0.clone();
+        println!(
+            "ℹ️️ universal_srs size for programs: {} bytes",
+            universal_srs.to_bytes_le().unwrap().len()
+        );
 
         let local_data_commitment_parameters = local_data_commitment.parameters().clone();
 
@@ -78,6 +82,10 @@ where
             rng,
         )?;
         let verifying_key: Self::VerifyingKey = prepared_verifying_key.into();
+        println!(
+            "ℹ️️ indexed vk size for programs: {} bytes",
+            verifying_key.to_bytes_le().unwrap().len()
+        );
 
         // Compute the program ID.
         let id = to_bytes_le![<C as DPCComponents>::ProgramVerificationKeyCRH::hash(
