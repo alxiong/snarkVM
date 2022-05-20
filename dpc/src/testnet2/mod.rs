@@ -187,8 +187,8 @@ where
         let inner_circuit = InnerCircuit::blank(&system_parameters, ledger_parameters);
         let inner_snark_parameters = C::InnerSNARK::setup(&inner_circuit, rng)?;
         println!(
-            "ℹ️️ indexed vk size for inner snark: {} bytes",
-            inner_snark_parameters.1.to_bytes_le().unwrap().len()
+            "ℹ️️ crs size for inner snark: {} bytes",
+            inner_snark_parameters.0.to_bytes_le().unwrap().len()
         );
         end_timer!(snark_setup_time);
 
@@ -207,8 +207,8 @@ where
             rng,
         )?;
         println!(
-            "ℹ️️ indexed vk size for outer snark: {} bytes",
-            outer_snark_parameters.1.to_bytes_le().unwrap().len()
+            "ℹ️️ crs size for outer snark: {} bytes",
+            outer_snark_parameters.0.to_bytes_le().unwrap().len()
         );
         end_timer!(snark_setup_time);
         end_timer!(setup_time);
