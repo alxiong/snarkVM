@@ -43,7 +43,7 @@ use rand::SeedableRng;
 use rand_chacha::ChaChaRng;
 use std::{
     sync::Arc,
-    time::{SystemTime, UNIX_EPOCH},
+    time::{Instant, SystemTime, UNIX_EPOCH},
 };
 
 type L = Ledger<Testnet1Transaction, CommitmentMerkleParameters, MemDb>;
@@ -76,8 +76,16 @@ fn test_testnet1_inner_circuit_sanity_check() {
 fn dpc_testnet1_integration_test() {
     let mut rng = ChaChaRng::seed_from_u64(1231275789u64);
 
-    // Generate or load parameters for the ledger, commitment schemes, and CRH.
-    let (ledger_parameters, dpc) = setup_or_load_parameters::<_, MemDb>(false, &mut rng);
+    // // Generate or load parameters for the ledger, commitment schemes, and CRH.
+    // let (ledger_parameters, dpc) = setup_or_load_parameters::<_, MemDb>(false, &mut rng);
+
+    // Generate parameters for the ledger, commitment schemes, and CRH.
+    let crh_parameters = <snarkvm_dpc::testnet1::instantiated::MerkleTreeCRH as CRH>::setup(&mut rng);
+    let merkle_tree_hash_parameters = <CommitmentMerkleParameters as MerkleParameters>::H::from(crh_parameters);
+    let ledger_parameters = Arc::new(From::from(merkle_tree_hash_parameters));
+    // Setup DPC scheme (dominated by SNARK setup for inner, program and outer circuits)
+    let dpc = <Testnet1DPC as DPCScheme<MerkleTreeLedger<MemDb>>>::setup(&ledger_parameters, &mut rng)
+        .expect("DPC setup failed");
 
     // Generate accounts.
     let [genesis_account, recipient, _] = generate_test_accounts::<_, MemDb>(&dpc, &mut rng);
@@ -157,6 +165,8 @@ fn dpc_testnet1_integration_test() {
         );
     }
 
+    let execute = Instant::now();
+
     // Offline execution to generate a DPC transaction kernel.
     let memo = [4u8; 32];
     let transaction_kernel = <Testnet1DPC as DPCScheme<L>>::execute_offline_phase(
@@ -169,6 +179,7 @@ fn dpc_testnet1_integration_test() {
     )
     .unwrap();
 
+    let program_gen = Instant::now();
     // Generate the program proofs
     let mut program_proofs = vec![];
     for i in 0..Components::NUM_TOTAL_RECORDS {
@@ -178,10 +189,26 @@ fn dpc_testnet1_integration_test() {
                 .unwrap(),
         );
     }
+    println!(
+        "⏱️ All {} program proof gen takes: {} ms",
+        Components::NUM_TOTAL_RECORDS,
+        program_gen.elapsed().as_millis()
+    );
 
     let (new_records, transaction) = dpc
         .execute_online_phase(&old_private_keys, transaction_kernel, program_proofs, &ledger, &mut rng)
         .unwrap();
+    println!("⏱️ DPC::Execute takes: {} ms", execute.elapsed().as_millis());
+    {
+        // let inner_proof_bytes = to_bytes_le!(transaction.transaction_proof.0).unwrap();
+        // let outer_proof_bytes = to_bytes_le!(transaction.transaction_proof.1).unwrap();
+        // println!(
+        //     "ℹ️️ total proof size: {} + {} = {} bytes",
+        //     inner_proof_bytes.len(),
+        //     outer_proof_bytes.len(),
+        //     inner_proof_bytes.len() + outer_proof_bytes.len()
+        // );
+    }
 
     // Check that the transaction is serialized and deserialized correctly
     let transaction_bytes = to_bytes_le![transaction].unwrap();
@@ -238,7 +265,9 @@ fn dpc_testnet1_integration_test() {
         proof: ProofOfSuccinctWork([0u8; 972]),
     };
 
+    let now = Instant::now();
     assert!(Testnet1DPC::verify_transactions(&dpc, &transactions.0, &ledger));
+    println!("⏱️ DPC::Verify takes: {} ms", now.elapsed().as_millis());
 
     let block = Block { header, transactions };
 
@@ -631,21 +660,21 @@ fn test_testnet1_dpc_execute_constraints() {
     execute_outer_circuit::<_, _>(
         &mut outer_circuit_cs.ns(|| "Outer circuit"),
         &system_parameters,
-        ledger.parameters(),
-        &ledger_digest,
-        &old_serial_numbers,
-        &new_commitments,
-        &new_encrypted_record_hashes,
-        &memorandum,
-        value_balance,
-        network_id,
-        &inner_snark_vk,
-        &inner_snark_proof,
+        // ledger.parameters(),
+        // &ledger_digest,
+        // &old_serial_numbers,
+        // &new_commitments,
+        // &new_encrypted_record_hashes,
+        // &memorandum,
+        // value_balance,
+        // network_id,
+        // &inner_snark_vk,
+        // &inner_snark_proof,
         &program_proofs,
         &program_commitment,
         &program_randomness,
         &local_data_root,
-        &inner_snark_id,
+        // &inner_snark_id,
     )
     .unwrap();
 

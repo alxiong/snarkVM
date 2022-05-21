@@ -14,15 +14,10 @@
 // You should have received a copy of the GNU General Public License
 // along with the snarkVM library. If not, see <https://www.gnu.org/licenses/>.
 
-use itertools::Itertools;
-
-use crate::{
-    testnet1::{parameters::SystemParameters, program::Execution, Testnet1Components},
-    AleoAmount,
-};
+use crate::testnet1::{parameters::SystemParameters, program::Execution, Testnet1Components};
 use snarkvm_algorithms::{
     merkle_tree::MerkleTreeDigest,
-    traits::{CommitmentScheme, EncryptionScheme, MerkleParameters, SignatureScheme, CRH, SNARK},
+    traits::{CommitmentScheme, EncryptionScheme, MerkleParameters, SignatureScheme, CRH},
 };
 use snarkvm_fields::ToConstraintField;
 use snarkvm_gadgets::{
@@ -66,19 +61,19 @@ pub fn execute_outer_circuit<C: Testnet1Components, CS: ConstraintSystem<C::Oute
     // Parameters
     system_parameters: &SystemParameters<C>,
 
-    // Inner snark verifier public inputs
-    ledger_parameters: &C::MerkleParameters,
-    ledger_digest: &MerkleTreeDigest<C::MerkleParameters>,
-    old_serial_numbers: &[<C::AccountSignature as SignatureScheme>::PublicKey],
-    new_commitments: &[<C::RecordCommitment as CommitmentScheme>::Output],
-    new_encrypted_record_hashes: &[<C::EncryptedRecordCRH as CRH>::Output],
-    memo: &[u8; 32],
-    value_balance: AleoAmount,
-    network_id: u8,
+    // // Inner snark verifier public inputs
+    // ledger_parameters: &C::MerkleParameters,
+    // ledger_digest: &MerkleTreeDigest<C::MerkleParameters>,
+    // old_serial_numbers: &[<C::AccountSignature as SignatureScheme>::PublicKey],
+    // new_commitments: &[<C::RecordCommitment as CommitmentScheme>::Output],
+    // new_encrypted_record_hashes: &[<C::EncryptedRecordCRH as CRH>::Output],
+    // memo: &[u8; 32],
+    // value_balance: AleoAmount,
+    // network_id: u8,
 
-    // Inner snark verifier private inputs (verifying key and proof)
-    inner_snark_vk: &<C::InnerSNARK as SNARK>::VerifyingKey,
-    inner_snark_proof: &<C::InnerSNARK as SNARK>::Proof,
+    // // Inner snark verifier private inputs (verifying key and proof)
+    // inner_snark_vk: &<C::InnerSNARK as SNARK>::VerifyingKey,
+    // inner_snark_proof: &<C::InnerSNARK as SNARK>::Proof,
 
     // Program verifying keys and proofs
     program_proofs: &[Execution],
@@ -87,8 +82,7 @@ pub fn execute_outer_circuit<C: Testnet1Components, CS: ConstraintSystem<C::Oute
     program_commitment: &<C::ProgramVerificationKeyCommitment as CommitmentScheme>::Output,
     program_randomness: &<C::ProgramVerificationKeyCommitment as CommitmentScheme>::Randomness,
     local_data_root: &<C::LocalDataCRH as CRH>::Output,
-
-    inner_circuit_id: &<C::InnerCircuitIDCRH as CRH>::Output,
+    // inner_circuit_id: &<C::InnerCircuitIDCRH as CRH>::Output,
 ) -> Result<(), SynthesisError>
 where
     <C::AccountCommitment as CommitmentScheme>::Parameters: ToConstraintField<C::InnerScalarField>,
@@ -117,7 +111,7 @@ where
     MerkleTreeDigest<C::MerkleParameters>: ToConstraintField<C::InnerScalarField>,
 {
     // Declare public parameters.
-    let (program_vk_commitment_parameters, program_vk_crh_parameters, inner_circuit_id_crh_parameters) = {
+    let (program_vk_commitment_parameters, program_vk_crh_parameters) = {
         let cs = &mut cs.ns(|| "Declare Comm and CRH parameters");
 
         let program_vk_commitment_parameters = <C::ProgramVerificationKeyCommitmentGadget as CommitmentGadget<
@@ -134,16 +128,16 @@ where
                 || Ok(system_parameters.program_verification_key_crh.parameters()),
             )?;
 
-        let inner_circuit_id_crh_parameters =
-            <C::InnerCircuitIDCRHGadget as CRHGadget<_, C::OuterScalarField>>::ParametersGadget::alloc_input(
-                &mut cs.ns(|| "Declare inner_circuit_id_crh_parameters"),
-                || Ok(system_parameters.inner_circuit_id_crh.parameters()),
-            )?;
+        // let inner_circuit_id_crh_parameters =
+        //     <C::InnerCircuitIDCRHGadget as CRHGadget<_, C::OuterScalarField>>::ParametersGadget::alloc_input(
+        //         &mut cs.ns(|| "Declare inner_circuit_id_crh_parameters"),
+        //         || Ok(system_parameters.inner_circuit_id_crh.parameters()),
+        //     )?;
 
         (
             program_vk_commitment_parameters,
             program_vk_crh_parameters,
-            inner_circuit_id_crh_parameters,
+            // inner_circuit_id_crh_parameters,
         )
     };
 
@@ -153,183 +147,183 @@ where
 
     // Declare inner snark verifier inputs as `CoreCheckF` field elements
 
-    let account_commitment_parameters_fe =
-        ToConstraintField::<C::InnerScalarField>::to_field_elements(system_parameters.account_commitment.parameters())
-            .map_err(|_| SynthesisError::AssignmentMissing)?;
+    // let account_commitment_parameters_fe =
+    //     ToConstraintField::<C::InnerScalarField>::to_field_elements(system_parameters.account_commitment.parameters())
+    //         .map_err(|_| SynthesisError::AssignmentMissing)?;
 
-    let account_encryption_parameters_fe = ToConstraintField::<C::InnerScalarField>::to_field_elements(
-        <C::AccountEncryption as EncryptionScheme>::parameters(&system_parameters.account_encryption),
-    )
-    .map_err(|_| SynthesisError::AssignmentMissing)?;
+    // let account_encryption_parameters_fe = ToConstraintField::<C::InnerScalarField>::to_field_elements(
+    //     <C::AccountEncryption as EncryptionScheme>::parameters(&system_parameters.account_encryption),
+    // )
+    // .map_err(|_| SynthesisError::AssignmentMissing)?;
 
-    let account_signature_fe =
-        ToConstraintField::<C::InnerScalarField>::to_field_elements(system_parameters.account_signature.parameters())
-            .map_err(|_| SynthesisError::AssignmentMissing)?;
+    // let account_signature_fe =
+    //     ToConstraintField::<C::InnerScalarField>::to_field_elements(system_parameters.account_signature.parameters())
+    //         .map_err(|_| SynthesisError::AssignmentMissing)?;
 
-    let record_commitment_parameters_fe =
-        ToConstraintField::<C::InnerScalarField>::to_field_elements(system_parameters.record_commitment.parameters())
-            .map_err(|_| SynthesisError::AssignmentMissing)?;
+    // let record_commitment_parameters_fe =
+    //     ToConstraintField::<C::InnerScalarField>::to_field_elements(system_parameters.record_commitment.parameters())
+    //         .map_err(|_| SynthesisError::AssignmentMissing)?;
 
-    let encrypted_record_crh_parameters_fe = ToConstraintField::<C::InnerScalarField>::to_field_elements(
-        system_parameters.encrypted_record_crh.parameters(),
-    )
-    .map_err(|_| SynthesisError::AssignmentMissing)?;
+    // let encrypted_record_crh_parameters_fe = ToConstraintField::<C::InnerScalarField>::to_field_elements(
+    //     system_parameters.encrypted_record_crh.parameters(),
+    // )
+    // .map_err(|_| SynthesisError::AssignmentMissing)?;
 
-    let program_vk_commitment_parameters_fe = ToConstraintField::<C::InnerScalarField>::to_field_elements(
-        system_parameters.program_verification_key_commitment.parameters(),
-    )
-    .map_err(|_| SynthesisError::AssignmentMissing)?;
+    // let program_vk_commitment_parameters_fe = ToConstraintField::<C::InnerScalarField>::to_field_elements(
+    //     system_parameters.program_verification_key_commitment.parameters(),
+    // )
+    // .map_err(|_| SynthesisError::AssignmentMissing)?;
 
     let local_data_crh_parameters_fe =
         ToConstraintField::<C::InnerScalarField>::to_field_elements(system_parameters.local_data_crh.parameters())
             .map_err(|_| SynthesisError::AssignmentMissing)?;
 
-    let serial_number_nonce_crh_parameters_fe =
-        ToConstraintField::<C::InnerScalarField>::to_field_elements(system_parameters.serial_number_nonce.parameters())
-            .map_err(|_| SynthesisError::AssignmentMissing)?;
+    // let serial_number_nonce_crh_parameters_fe =
+    //     ToConstraintField::<C::InnerScalarField>::to_field_elements(system_parameters.serial_number_nonce.parameters())
+    //         .map_err(|_| SynthesisError::AssignmentMissing)?;
 
-    let ledger_parameters_fe =
-        ToConstraintField::<C::InnerScalarField>::to_field_elements(ledger_parameters.parameters())
-            .map_err(|_| SynthesisError::AssignmentMissing)?;
+    // let ledger_parameters_fe =
+    //     ToConstraintField::<C::InnerScalarField>::to_field_elements(ledger_parameters.parameters())
+    //         .map_err(|_| SynthesisError::AssignmentMissing)?;
 
-    let ledger_digest_fe = ToConstraintField::<C::InnerScalarField>::to_field_elements(ledger_digest)
-        .map_err(|_| SynthesisError::AssignmentMissing)?;
+    // let ledger_digest_fe = ToConstraintField::<C::InnerScalarField>::to_field_elements(ledger_digest)
+    //     .map_err(|_| SynthesisError::AssignmentMissing)?;
 
-    let program_commitment_fe = ToConstraintField::<C::InnerScalarField>::to_field_elements(program_commitment)
-        .map_err(|_| SynthesisError::AssignmentMissing)?;
+    // let program_commitment_fe = ToConstraintField::<C::InnerScalarField>::to_field_elements(program_commitment)
+    //     .map_err(|_| SynthesisError::AssignmentMissing)?;
 
-    let memo_fe = ToConstraintField::<C::InnerScalarField>::to_field_elements(memo)
-        .map_err(|_| SynthesisError::AssignmentMissing)?;
+    // let memo_fe = ToConstraintField::<C::InnerScalarField>::to_field_elements(memo)
+    //     .map_err(|_| SynthesisError::AssignmentMissing)?;
 
     let local_data_root_fe = ToConstraintField::<C::InnerScalarField>::to_field_elements(local_data_root)
         .map_err(|_| SynthesisError::AssignmentMissing)?;
 
-    let value_balance_fe =
-        ToConstraintField::<C::InnerScalarField>::to_field_elements(&value_balance.0.to_le_bytes()[..])
-            .map_err(|_| SynthesisError::AssignmentMissing)?;
+    // let value_balance_fe =
+    //     ToConstraintField::<C::InnerScalarField>::to_field_elements(&value_balance.0.to_le_bytes()[..])
+    //         .map_err(|_| SynthesisError::AssignmentMissing)?;
 
-    let network_id_fe = ToConstraintField::<C::InnerScalarField>::to_field_elements(&[network_id][..])
-        .map_err(|_| SynthesisError::AssignmentMissing)?;
+    // let network_id_fe = ToConstraintField::<C::InnerScalarField>::to_field_elements(&[network_id][..])
+    //     .map_err(|_| SynthesisError::AssignmentMissing)?;
 
     // Allocate field element bytes
 
-    let account_commitment_fe_bytes =
-        field_element_to_bytes::<C, _>(cs, account_commitment_parameters_fe, "account commitment pp")?;
+    // let account_commitment_fe_bytes =
+    //     field_element_to_bytes::<C, _>(cs, account_commitment_parameters_fe, "account commitment pp")?;
 
-    let account_encryption_fe_bytes =
-        field_element_to_bytes::<C, _>(cs, account_encryption_parameters_fe, "account encryption pp")?;
+    // let account_encryption_fe_bytes =
+    //     field_element_to_bytes::<C, _>(cs, account_encryption_parameters_fe, "account encryption pp")?;
 
-    let account_signature_fe_bytes = field_element_to_bytes::<C, _>(cs, account_signature_fe, "account signature pp")?;
-    let record_commitment_parameters_fe_bytes =
-        field_element_to_bytes::<C, _>(cs, record_commitment_parameters_fe, "record commitment pp")?;
-    let encrypted_record_crh_parameters_fe_bytes =
-        field_element_to_bytes::<C, _>(cs, encrypted_record_crh_parameters_fe, "encrypted record crh pp")?;
-    let program_vk_commitment_parameters_fe_bytes =
-        field_element_to_bytes::<C, _>(cs, program_vk_commitment_parameters_fe, "program vk commitment pp")?;
+    // let account_signature_fe_bytes = field_element_to_bytes::<C, _>(cs, account_signature_fe, "account signature pp")?;
+    // let record_commitment_parameters_fe_bytes =
+    //     field_element_to_bytes::<C, _>(cs, record_commitment_parameters_fe, "record commitment pp")?;
+    // let encrypted_record_crh_parameters_fe_bytes =
+    //     field_element_to_bytes::<C, _>(cs, encrypted_record_crh_parameters_fe, "encrypted record crh pp")?;
+    // let program_vk_commitment_parameters_fe_bytes =
+    //     field_element_to_bytes::<C, _>(cs, program_vk_commitment_parameters_fe, "program vk commitment pp")?;
     let local_data_commitment_parameters_fe_bytes =
         field_element_to_bytes::<C, _>(cs, local_data_crh_parameters_fe, "local data commitment pp")?;
-    let serial_number_nonce_crh_parameters_fe_bytes =
-        field_element_to_bytes::<C, _>(cs, serial_number_nonce_crh_parameters_fe, "serial number nonce crh pp")?;
-    let ledger_parameters_fe_bytes = field_element_to_bytes::<C, _>(cs, ledger_parameters_fe, "ledger pp")?;
-    let ledger_digest_fe_bytes = field_element_to_bytes::<C, _>(cs, ledger_digest_fe, "ledger digest")?;
+    // let serial_number_nonce_crh_parameters_fe_bytes =
+    //     field_element_to_bytes::<C, _>(cs, serial_number_nonce_crh_parameters_fe, "serial number nonce crh pp")?;
+    // let ledger_parameters_fe_bytes = field_element_to_bytes::<C, _>(cs, ledger_parameters_fe, "ledger pp")?;
+    // let ledger_digest_fe_bytes = field_element_to_bytes::<C, _>(cs, ledger_digest_fe, "ledger digest")?;
 
-    let mut serial_number_fe_bytes = vec![];
-    for (index, sn) in old_serial_numbers.iter().enumerate() {
-        let serial_number_fe = ToConstraintField::<C::InnerScalarField>::to_field_elements(sn)
-            .map_err(|_| SynthesisError::AssignmentMissing)?;
+    // let mut serial_number_fe_bytes = vec![];
+    // for (index, sn) in old_serial_numbers.iter().enumerate() {
+    //     let serial_number_fe = ToConstraintField::<C::InnerScalarField>::to_field_elements(sn)
+    //         .map_err(|_| SynthesisError::AssignmentMissing)?;
 
-        serial_number_fe_bytes.extend(field_element_to_bytes::<C, _>(
-            cs,
-            serial_number_fe,
-            &format!("Allocate serial number {:?}", index),
-        )?);
-    }
+    //     serial_number_fe_bytes.extend(field_element_to_bytes::<C, _>(
+    //         cs,
+    //         serial_number_fe,
+    //         &format!("Allocate serial number {:?}", index),
+    //     )?);
+    // }
 
-    let mut commitment_and_encrypted_record_hash_fe_bytes = vec![];
-    for (index, (cm, encrypted_record_hash)) in new_commitments
-        .iter()
-        .zip_eq(new_encrypted_record_hashes.iter())
-        .enumerate()
-    {
-        let commitment_fe = ToConstraintField::<C::InnerScalarField>::to_field_elements(cm)
-            .map_err(|_| SynthesisError::AssignmentMissing)?;
-        let encrypted_record_hash_fe =
-            ToConstraintField::<C::InnerScalarField>::to_field_elements(encrypted_record_hash)
-                .map_err(|_| SynthesisError::AssignmentMissing)?;
+    // let mut commitment_and_encrypted_record_hash_fe_bytes = vec![];
+    // for (index, (cm, encrypted_record_hash)) in new_commitments
+    //     .iter()
+    //     .zip_eq(new_encrypted_record_hashes.iter())
+    //     .enumerate()
+    // {
+    //     let commitment_fe = ToConstraintField::<C::InnerScalarField>::to_field_elements(cm)
+    //         .map_err(|_| SynthesisError::AssignmentMissing)?;
+    //     let encrypted_record_hash_fe =
+    //         ToConstraintField::<C::InnerScalarField>::to_field_elements(encrypted_record_hash)
+    //             .map_err(|_| SynthesisError::AssignmentMissing)?;
 
-        commitment_and_encrypted_record_hash_fe_bytes.extend(field_element_to_bytes::<C, _>(
-            cs,
-            commitment_fe,
-            &format!("Allocate record commitment {:?}", index),
-        )?);
+    //     commitment_and_encrypted_record_hash_fe_bytes.extend(field_element_to_bytes::<C, _>(
+    //         cs,
+    //         commitment_fe,
+    //         &format!("Allocate record commitment {:?}", index),
+    //     )?);
 
-        commitment_and_encrypted_record_hash_fe_bytes.extend(field_element_to_bytes::<C, _>(
-            cs,
-            encrypted_record_hash_fe,
-            &format!("Allocate encrypted record hash {:?}", index),
-        )?);
-    }
+    //     commitment_and_encrypted_record_hash_fe_bytes.extend(field_element_to_bytes::<C, _>(
+    //         cs,
+    //         encrypted_record_hash_fe,
+    //         &format!("Allocate encrypted record hash {:?}", index),
+    //     )?);
+    // }
 
-    let program_commitment_fe_bytes = field_element_to_bytes::<C, _>(cs, program_commitment_fe, "program commitment")?;
-    let memo_fe_bytes = field_element_to_bytes::<C, _>(cs, memo_fe, "memo")?;
-    let network_id_fe_bytes = field_element_to_bytes::<C, _>(cs, network_id_fe, "network id")?;
+    // let program_commitment_fe_bytes = field_element_to_bytes::<C, _>(cs, program_commitment_fe, "program commitment")?;
+    // let memo_fe_bytes = field_element_to_bytes::<C, _>(cs, memo_fe, "memo")?;
+    // let network_id_fe_bytes = field_element_to_bytes::<C, _>(cs, network_id_fe, "network id")?;
     let local_data_root_fe_bytes = field_element_to_bytes::<C, _>(cs, local_data_root_fe, "local data root")?;
-    let value_balance_fe_bytes = field_element_to_bytes::<C, _>(cs, value_balance_fe, "value balance")?;
+    // let value_balance_fe_bytes = field_element_to_bytes::<C, _>(cs, value_balance_fe, "value balance")?;
 
     // Construct inner snark input as bytes
 
-    let mut inner_snark_input_bytes = vec![];
-    inner_snark_input_bytes.extend(account_commitment_fe_bytes);
-    inner_snark_input_bytes.extend(account_encryption_fe_bytes);
-    inner_snark_input_bytes.extend(account_signature_fe_bytes);
-    inner_snark_input_bytes.extend(record_commitment_parameters_fe_bytes);
-    inner_snark_input_bytes.extend(encrypted_record_crh_parameters_fe_bytes);
-    inner_snark_input_bytes.extend(program_vk_commitment_parameters_fe_bytes);
-    inner_snark_input_bytes.extend(local_data_commitment_parameters_fe_bytes.clone());
-    inner_snark_input_bytes.extend(serial_number_nonce_crh_parameters_fe_bytes);
-    inner_snark_input_bytes.extend(ledger_parameters_fe_bytes);
-    inner_snark_input_bytes.extend(ledger_digest_fe_bytes);
-    inner_snark_input_bytes.extend(serial_number_fe_bytes);
-    inner_snark_input_bytes.extend(commitment_and_encrypted_record_hash_fe_bytes);
-    inner_snark_input_bytes.extend(program_commitment_fe_bytes);
-    inner_snark_input_bytes.extend(memo_fe_bytes);
-    inner_snark_input_bytes.extend(network_id_fe_bytes);
-    inner_snark_input_bytes.extend(local_data_root_fe_bytes.clone());
-    inner_snark_input_bytes.extend(value_balance_fe_bytes);
+    // let mut inner_snark_input_bytes = vec![];
+    // inner_snark_input_bytes.extend(account_commitment_fe_bytes);
+    // inner_snark_input_bytes.extend(account_encryption_fe_bytes);
+    // inner_snark_input_bytes.extend(account_signature_fe_bytes);
+    // inner_snark_input_bytes.extend(record_commitment_parameters_fe_bytes);
+    // inner_snark_input_bytes.extend(encrypted_record_crh_parameters_fe_bytes);
+    // inner_snark_input_bytes.extend(program_vk_commitment_parameters_fe_bytes);
+    // inner_snark_input_bytes.extend(local_data_commitment_parameters_fe_bytes.clone());
+    // inner_snark_input_bytes.extend(serial_number_nonce_crh_parameters_fe_bytes);
+    // inner_snark_input_bytes.extend(ledger_parameters_fe_bytes);
+    // inner_snark_input_bytes.extend(ledger_digest_fe_bytes);
+    // inner_snark_input_bytes.extend(serial_number_fe_bytes);
+    // inner_snark_input_bytes.extend(commitment_and_encrypted_record_hash_fe_bytes);
+    // inner_snark_input_bytes.extend(program_commitment_fe_bytes);
+    // inner_snark_input_bytes.extend(memo_fe_bytes);
+    // inner_snark_input_bytes.extend(network_id_fe_bytes);
+    // inner_snark_input_bytes.extend(local_data_root_fe_bytes.clone());
+    // inner_snark_input_bytes.extend(value_balance_fe_bytes);
 
-    // Convert inner snark input bytes to bits
+    // // Convert inner snark input bytes to bits
 
-    let mut inner_snark_input_bits = Vec::with_capacity(inner_snark_input_bytes.len());
-    for input_bytes in inner_snark_input_bytes {
-        let input_bits = input_bytes
-            .iter()
-            .flat_map(|byte| byte.to_bits_le())
-            .collect::<Vec<_>>();
-        inner_snark_input_bits.push(input_bits);
-    }
+    // let mut inner_snark_input_bits = Vec::with_capacity(inner_snark_input_bytes.len());
+    // for input_bytes in inner_snark_input_bytes {
+    //     let input_bits = input_bytes
+    //         .iter()
+    //         .flat_map(|byte| byte.to_bits_le())
+    //         .collect::<Vec<_>>();
+    //     inner_snark_input_bits.push(input_bits);
+    // }
 
-    // ************************************************************************
-    // Verify the InnerSNARK proof
-    // ************************************************************************
+    // // ************************************************************************
+    // // Verify the InnerSNARK proof
+    // // ************************************************************************
 
-    let inner_snark_vk = <C::InnerSNARKGadget as SNARKVerifierGadget<_, _>>::VerificationKeyGadget::alloc(
-        &mut cs.ns(|| "Allocate inner snark verifying key"),
-        || Ok(inner_snark_vk),
-    )?;
+    // let inner_snark_vk = <C::InnerSNARKGadget as SNARKVerifierGadget<_, _>>::VerificationKeyGadget::alloc(
+    //     &mut cs.ns(|| "Allocate inner snark verifying key"),
+    //     || Ok(inner_snark_vk),
+    // )?;
 
-    let inner_snark_proof = <C::InnerSNARKGadget as SNARKVerifierGadget<_, _>>::ProofGadget::alloc(
-        &mut cs.ns(|| "Allocate inner snark proof"),
-        || Ok(inner_snark_proof),
-    )?;
+    // let inner_snark_proof = <C::InnerSNARKGadget as SNARKVerifierGadget<_, _>>::ProofGadget::alloc(
+    //     &mut cs.ns(|| "Allocate inner snark proof"),
+    //     || Ok(inner_snark_proof),
+    // )?;
 
-    C::InnerSNARKGadget::check_verify(
-        &mut cs.ns(|| "Check that proof is satisfied"),
-        &inner_snark_vk,
-        inner_snark_input_bits.iter().filter(|inp| !inp.is_empty()).cloned(),
-        &inner_snark_proof,
-    )?;
+    // C::InnerSNARKGadget::check_verify(
+    //     &mut cs.ns(|| "Check that proof is satisfied"),
+    //     &inner_snark_vk,
+    //     inner_snark_input_bits.iter().filter(|inp| !inp.is_empty()).cloned(),
+    //     &inner_snark_proof,
+    // )?;
 
-    drop(inner_snark_input_bits);
+    // drop(inner_snark_input_bits);
 
     // ************************************************************************
     // Construct program input
@@ -491,24 +485,24 @@ where
     // Check that the inner circuit ID is derived correctly.
     // ********************************************************************
 
-    let inner_snark_vk_bytes = inner_snark_vk.to_bytes(&mut cs.ns(|| "Convert inner snark vk to bytes"))?;
+    // let inner_snark_vk_bytes = inner_snark_vk.to_bytes(&mut cs.ns(|| "Convert inner snark vk to bytes"))?;
 
-    let given_inner_circuit_id =
-        <C::InnerCircuitIDCRHGadget as CRHGadget<_, C::OuterScalarField>>::OutputGadget::alloc_input(
-            &mut cs.ns(|| "Inner circuit ID"),
-            || Ok(inner_circuit_id),
-        )?;
+    // let given_inner_circuit_id =
+    //     <C::InnerCircuitIDCRHGadget as CRHGadget<_, C::OuterScalarField>>::OutputGadget::alloc_input(
+    //         &mut cs.ns(|| "Inner circuit ID"),
+    //         || Ok(inner_circuit_id),
+    //     )?;
 
-    let candidate_inner_circuit_id = C::InnerCircuitIDCRHGadget::check_evaluation_gadget(
-        &mut cs.ns(|| "Compute inner circuit ID"),
-        &inner_circuit_id_crh_parameters,
-        inner_snark_vk_bytes,
-    )?;
+    // let candidate_inner_circuit_id = C::InnerCircuitIDCRHGadget::check_evaluation_gadget(
+    //     &mut cs.ns(|| "Compute inner circuit ID"),
+    //     &inner_circuit_id_crh_parameters,
+    //     inner_snark_vk_bytes,
+    // )?;
 
-    candidate_inner_circuit_id.enforce_equal(
-        &mut cs.ns(|| "Check that declared and computed inner circuit IDs are equal"),
-        &given_inner_circuit_id,
-    )?;
+    // candidate_inner_circuit_id.enforce_equal(
+    //     &mut cs.ns(|| "Check that declared and computed inner circuit IDs are equal"),
+    //     &given_inner_circuit_id,
+    // )?;
 
     Ok(())
 }

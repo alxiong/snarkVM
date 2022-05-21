@@ -79,7 +79,7 @@ pub struct Transaction<C: Testnet1Components> {
 
     #[derivative(PartialEq = "ignore")]
     /// Zero-knowledge proof attesting to the valididty of the transaction
-    pub transaction_proof: <C::OuterSNARK as SNARK>::Proof,
+    pub transaction_proof: (<C::InnerSNARK as SNARK>::Proof, <C::OuterSNARK as SNARK>::Proof),
 
     /// Public data associated with the transaction that must be unique among all transactions
     pub memorandum: [u8; 32],
@@ -96,7 +96,7 @@ impl<C: Testnet1Components> Transaction<C> {
         memorandum: <Self as TransactionScheme>::Memorandum,
         ledger_digest: MerkleTreeDigest<C::MerkleParameters>,
         inner_circuit_id: <C::InnerCircuitIDCRH as CRH>::Output,
-        transaction_proof: <C::OuterSNARK as SNARK>::Proof,
+        transaction_proof: (<C::InnerSNARK as SNARK>::Proof, <C::OuterSNARK as SNARK>::Proof),
         program_commitment: <C::ProgramVerificationKeyCommitment as CommitmentScheme>::Output,
         local_data_root: <C::LocalDataCRH as CRH>::Output,
         value_balance: AleoAmount,
@@ -269,7 +269,9 @@ impl<C: Testnet1Components> FromBytes for Transaction<C> {
 
         let ledger_digest: MerkleTreeDigest<C::MerkleParameters> = FromBytes::read_le(&mut reader)?;
         let inner_circuit_id: <C::InnerCircuitIDCRH as CRH>::Output = FromBytes::read_le(&mut reader)?;
-        let transaction_proof: <C::OuterSNARK as SNARK>::Proof = FromBytes::read_le(&mut reader)?;
+        let inner_proof: <C::InnerSNARK as SNARK>::Proof = FromBytes::read_le(&mut reader)?;
+        let outer_proof: <C::OuterSNARK as SNARK>::Proof = FromBytes::read_le(&mut reader)?;
+        let transaction_proof = (inner_proof, outer_proof);
         let program_commitment: <C::ProgramVerificationKeyCommitment as CommitmentScheme>::Output =
             FromBytes::read_le(&mut reader)?;
         let local_data_root: <C::LocalDataCRH as CRH>::Output = FromBytes::read_le(&mut reader)?;

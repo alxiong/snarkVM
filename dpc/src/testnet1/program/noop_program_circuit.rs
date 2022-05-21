@@ -72,6 +72,21 @@ impl<C: Testnet1Components> ConstraintSynthesizer<C::InnerScalarField> for NoopC
             || Ok(local_data_root),
         )?;
 
+        // more aribtrary increase in constraint, get closer to 2^15
+        for i in cs.num_constraints()..(1 << 15) {
+            if i % 2 == 1 {
+                let f = C::InnerScalarField::from(i as u64);
+                let f_alloc = AllocatedFp::from(&mut cs.ns(|| format!("dummy field {}", i)), &f);
+                let a = FpGadget::from(f_alloc);
+                let _b = a
+                    .mul(&mut cs.ns(|| format!("dummy field mul result {}", i)), &a)
+                    .unwrap();
+            }
+        }
+        if cfg!(debug_assertions) {
+            println!("total number of NoopCircuit constraints: {}", cs.num_constraints());
+        }
+
         Ok(())
     }
 }

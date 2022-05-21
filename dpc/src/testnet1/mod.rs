@@ -37,7 +37,7 @@ use snarkvm_utilities::{has_duplicates, rand::UniformRand, to_bytes_le, FromByte
 
 use itertools::Itertools;
 use rand::{CryptoRng, Rng};
-use std::sync::Arc;
+use std::{sync::Arc, time::Instant};
 
 pub mod inner_circuit;
 pub use inner_circuit::*;
@@ -141,6 +141,8 @@ where
         let setup_time = start_timer!(|| "DPC::setup");
         let system_parameters = Arc::new(Self::SystemParameters::setup(rng)?);
 
+        let now = Instant::now();
+
         let noop_program_timer = start_timer!(|| "Noop program SNARK setup");
         let noop_program = NoopProgram::setup(
             &system_parameters.local_data_commitment,
@@ -154,23 +156,33 @@ where
         let inner_circuit = InnerCircuit::blank(&system_parameters, ledger_parameters);
         let inner_snark_parameters = C::InnerSNARK::setup(&inner_circuit, rng)?;
         end_timer!(snark_setup_time);
+        println!(
+            "ℹ️️ crs size for inner snark: {} bytes",
+            inner_snark_parameters.0.to_bytes_le().unwrap().len()
+        );
 
         let snark_setup_time = start_timer!(|| "Execute outer SNARK setup");
-        let inner_snark_vk: <C::InnerSNARK as SNARK>::VerifyingKey = inner_snark_parameters.1.clone().into();
-        let inner_snark_proof = C::InnerSNARK::prove(&inner_snark_parameters.0, &inner_circuit, rng)?;
+        // let inner_snark_vk: <C::InnerSNARK as SNARK>::VerifyingKey = inner_snark_parameters.1.clone().into();
+        // let inner_snark_proof = C::InnerSNARK::prove(&inner_snark_parameters.0, &inner_circuit, rng)?;
 
         let outer_snark_parameters = C::OuterSNARK::setup(
             &OuterCircuit::blank(
                 system_parameters.clone(),
-                ledger_parameters.clone(),
-                inner_snark_vk,
-                inner_snark_proof,
+                // ledger_parameters.clone(),
+                // inner_snark_vk,
+                // inner_snark_proof,
                 noop_program_execution,
             ),
             rng,
         )?;
+        println!(
+            "ℹ️️ crs size for outer snark: {} bytes",
+            outer_snark_parameters.0.to_bytes_le().unwrap().len()
+        );
+
         end_timer!(snark_setup_time);
         end_timer!(setup_time);
+        println!("⏱️ DPC::Setup takes {} ms", now.elapsed().as_millis());
 
         Ok(Self {
             system_parameters,
@@ -510,6 +522,7 @@ where
             new_records_encryption_gadget_components.push(record_encryption_gadget_components);
         }
 
+        let now = Instant::now();
         let inner_proof = {
             let circuit = InnerCircuit::new(
                 self.system_parameters.clone(),
@@ -541,6 +554,7 @@ where
 
             C::InnerSNARK::prove(&inner_snark_parameters, &circuit, rng)?
         };
+        println!("⏱️ Inner proof gen takes: {} ms", now.elapsed().as_millis());
 
         // Verify that the inner proof passes
         {
@@ -572,24 +586,24 @@ where
                 inner_snark_vk
             ]?)?;
 
-        let transaction_proof = {
+        let outer_proof = {
             let circuit = OuterCircuit::new(
                 self.system_parameters.clone(),
-                ledger.parameters().clone(),
-                ledger_digest.clone(),
-                old_serial_numbers.clone(),
-                new_commitments.clone(),
-                new_encrypted_record_hashes,
-                memorandum,
-                value_balance,
-                network_id,
-                inner_snark_vk,
-                inner_proof,
+                // ledger.parameters().clone(),
+                // ledger_digest.clone(),
+                // old_serial_numbers.clone(),
+                // new_commitments.clone(),
+                // new_encrypted_record_hashes,
+                // memorandum,
+                // value_balance,
+                // network_id,
+                // inner_snark_vk,
+                // inner_proof,
                 program_proofs,
                 program_commitment.clone(),
                 program_randomness,
                 local_data_root.clone(),
-                inner_circuit_id.clone(),
+                // inner_circuit_id.clone(),
             );
 
             let outer_snark_parameters = match &self.outer_snark_parameters.0 {
@@ -599,6 +613,7 @@ where
 
             C::OuterSNARK::prove(&outer_snark_parameters, &circuit, rng)?
         };
+        println!("⏱️ Outer proof gen takes: {} ms", now.elapsed().as_millis());
 
         let transaction = Self::Transaction::new(
             old_serial_numbers,
@@ -606,7 +621,7 @@ where
             memorandum,
             ledger_digest,
             inner_circuit_id,
-            transaction_proof,
+            (inner_proof, outer_proof),
             program_commitment,
             local_data_root,
             value_balance,
@@ -755,35 +770,60 @@ where
             network_id: transaction.network_id(),
         };
 
-        let inner_snark_vk: <<C as Testnet1Components>::InnerSNARK as SNARK>::VerifyingKey =
-            self.inner_snark_parameters.1.clone().into();
+        // let inner_snark_vk: <<C as Testnet1Components>::InnerSNARK as SNARK>::VerifyingKey =
+        //     self.inner_snark_parameters.1.clone().into();
 
-        let inner_snark_vk_bytes = match to_bytes_le![inner_snark_vk] {
-            Ok(bytes) => bytes,
-            _ => {
-                eprintln!("Unable to convert inner snark vk into bytes.");
-                return false;
-            }
-        };
-
-        let outer_snark_input = OuterCircuitVerifierInput {
-            inner_snark_verifier_input: inner_snark_input,
-            inner_circuit_id: match C::InnerCircuitIDCRH::hash(
-                &self.system_parameters.inner_circuit_id_crh,
-                &inner_snark_vk_bytes,
-            ) {
-                Ok(hash) => hash,
-                _ => {
-                    eprintln!("Unable to hash inner snark vk.");
+        // let inner_snark_vk_bytes = match to_bytes_le![inner_snark_vk] {
+        //     Ok(bytes) => bytes,
+        //     _ => {
+        //         eprintln!("Unable to convert inner snark vk into bytes.");
+        //         return false;
+        //     }
+        // };
+        let now = Instant::now();
+        match C::InnerSNARK::verify(
+            &self.inner_snark_parameters.1,
+            &inner_snark_input,
+            &transaction.transaction_proof.0,
+        ) {
+            Ok(is_valid) => {
+                if !is_valid {
+                    eprintln!("Inner UTXO proof failed to verify.");
                     return false;
                 }
-            },
+            }
+            _ => {
+                eprintln!("Unable to verify inner UTXO proof.");
+                return false;
+            }
+        }
+        println!("⏱️ Inner proof verification takes: {} ms", now.elapsed().as_millis());
+
+        let outer_snark_input = OuterCircuitVerifierInput {
+            program_verification_key_commitment: self.system_parameters.program_verification_key_commitment.clone(),
+            program_verification_key_crh: self.system_parameters.program_verification_key_crh.clone(),
+            program_commitment: transaction.program_commitment.clone(),
+            local_data_root: transaction.local_data_root.clone(),
         };
+
+        // let outer_snark_input = OuterCircuitVerifierInput {
+        //     inner_snark_verifier_input: inner_snark_input,
+        //     inner_circuit_id: match C::InnerCircuitIDCRH::hash(
+        //         &self.system_parameters.inner_circuit_id_crh,
+        //         &inner_snark_vk_bytes,
+        //     ) {
+        //         Ok(hash) => hash,
+        //         _ => {
+        //             eprintln!("Unable to hash inner snark vk.");
+        //             return false;
+        //         }
+        //     },
+        // };
 
         match C::OuterSNARK::verify(
             &self.outer_snark_parameters.1,
             &outer_snark_input,
-            &transaction.transaction_proof,
+            &transaction.transaction_proof.1,
         ) {
             Ok(is_valid) => {
                 if !is_valid {
