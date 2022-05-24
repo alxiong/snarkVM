@@ -80,8 +80,8 @@ pub struct Components;
 impl DPCComponents for Components {
     const NETWORK_ID: u8 = Network::Testnet2.id();
 
-    const NUM_INPUT_RECORDS: usize = 2;
-    const NUM_OUTPUT_RECORDS: usize = 2;
+    const NUM_INPUT_RECORDS: usize = 4;
+    const NUM_OUTPUT_RECORDS: usize = 4;
     
     type InnerCurve = Bls12_377;
     type OuterCurve = BW6_761;
@@ -124,7 +124,13 @@ impl DPCComponents for Components {
     type RecordCommitment = PedersenCompressedCommitment<EdwardsBls12, 8, 233>;
     type RecordCommitmentGadget = PedersenCompressedCommitmentGadget<EdwardsBls12, Self::InnerScalarField, EdwardsBls12Gadget>;
     
-    type SerialNumberNonceCRH = BoweHopwoodPedersenCompressedCRH<EdwardsBls12, 32, 63>;
+    type SerialNumberNonceCRH =
+        BoweHopwoodPedersenCompressedCRH<
+            EdwardsBls12,
+            { if Self::NUM_INPUT_RECORDS == 2 || Self::NUM_INPUT_RECORDS == 3 { 32 } else { 40 } },
+            { if Self::NUM_INPUT_RECORDS == 2 || Self::NUM_INPUT_RECORDS == 3 { 63 } else { 58 } }
+        >;
+    // type SerialNumberNonceCRH = BoweHopwoodPedersenCompressedCRH<EdwardsBls12, 32, 63>;
     type SerialNumberNonceCRHGadget = BoweHopwoodPedersenCompressedCRHGadget<EdwardsBls12, Self::InnerScalarField, EdwardsBls12Gadget>;
 }
 

@@ -1398,22 +1398,29 @@ where
                 }
                 (4, 4) => {
                     // need two extra inner commitment and two extra hashes
-                    for _ in 0..2 {
-                        let mut cs = cs.ns(|| format!("SIMULATE: Construct local data with output record {}", 0));
+                    for i in 0..2 {
+                        let mut cs =
+                            cs.ns(|| format!("SIMULATE: Construct local data with output record {}, {}", 0, i));
 
                         input_bytes.extend_from_slice(
-                            &new_record_commitments_gadgets[0].to_bytes(&mut cs.ns(|| "record_commitment"))?,
+                            &new_record_commitments_gadgets[0]
+                                .to_bytes(&mut cs.ns(|| format!("record_commitment {}", i)))?,
                         );
                         input_bytes.extend_from_slice(&memo);
                         input_bytes.extend_from_slice(&network_id);
 
                         let commitment_randomness = LocalDataCommitmentGadget::RandomnessGadget::alloc(
-                            cs.ns(|| format!("SIMULATE: Allocate new record local data commitment randomness {}", 0)),
+                            cs.ns(|| {
+                                format!(
+                                    "SIMULATE: Allocate new record local data commitment randomness {}, {}",
+                                    0, i
+                                )
+                            }),
                             || Ok(&local_data_commitment_randomizers[C::NUM_INPUT_RECORDS]),
                         )?;
 
                         let _commitment = LocalDataCommitmentGadget::check_commitment_gadget(
-                            cs.ns(|| format!("SIMULATE: Commit to new record local data {}", 0)),
+                            cs.ns(|| format!("SIMULATE: Commit to new record local data {}, {}", 0, i)),
                             &local_data_commitment_parameters,
                             &input_bytes,
                             &commitment_randomness,
@@ -1421,7 +1428,7 @@ where
                         input_bytes.clear();
 
                         let _ = LocalDataCRHGadget::check_evaluation_gadget(
-                            cs.ns(|| "SIMULATE: the third pair leaves commitment hash"),
+                            cs.ns(|| format!("SIMULATE: the third pair leaves commitment hash, {}", i)),
                             &local_data_crh_parameters,
                             new_record_commitment_bytes.clone(),
                         )?;

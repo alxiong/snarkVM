@@ -614,6 +614,12 @@ where
             C::OuterSNARK::prove(&outer_snark_parameters, &circuit, rng)?
         };
         println!("⏱️ Outer proof gen takes: {} ms", now.elapsed().as_millis());
+        println!(
+            "ℹ️️️ Proof size : {} + {} = {} bytes",
+            inner_proof.to_bytes_le()?.len(),
+            outer_proof.to_bytes_le()?.len(),
+            inner_proof.to_bytes_le()?.len() + outer_proof.to_bytes_le()?.len()
+        );
 
         let transaction = Self::Transaction::new(
             old_serial_numbers,
