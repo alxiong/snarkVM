@@ -1236,6 +1236,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "proc-status"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f0e0c0ac915e7b76b47850ba4ffc377abde6c6ff9eeace61d0a89623db449712"
+dependencies = [
+ "thiserror",
+]
+
+[[package]]
 name = "prost"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1827,6 +1836,7 @@ dependencies = [
  "hex",
  "itertools 0.10.1",
  "parking_lot",
+ "proc-status",
  "rand",
  "rand_chacha",
  "snarkvm-algorithms",

@@ -213,6 +213,12 @@ fn dpc_testnet2_integration_test() {
             inner_proof_bytes.len() + outer_proof_bytes.len()
         );
     }
+    let mem = proc_status::mem_usage().unwrap();
+    println!(
+        "⚠️ After Execute, Mem usage: current={} KB, peak={} KB",
+        mem.current / 1024,
+        mem.peak / 1024
+    );
 
     // Check that the transaction is serialized and deserialized correctly
     let transaction_bytes = to_bytes_le![transaction].unwrap();
