@@ -5,6 +5,8 @@
 First, ensure you have [Rust](https://www.rust-lang.org/tools/install) installed. 
 Then, try to run `cargo build --release` to compile the project.
 
+Note that all the following benchmark should be run inside `.integration/` folder.
+
 ## Benchmark
 
 To run benchmark for `n`-input-`n`-output DPC transaction, first go to file `./dpc/src/testnet2/instantiated.rs`, Line `80-81`:
