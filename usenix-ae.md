@@ -2,7 +2,7 @@
 
 ## Getting Started
 
-First, ensure you have [Rust](https://www.rust-lang.org/tools/install) installed. 
+First, ensure you have [Rust](https://www.rust-lang.org/tools/install) installed.
 Then, try to run `cargo build --release` to compile the project.
 
 Note that all the following benchmark should be run inside `.integration/` folder.
@@ -10,9 +10,13 @@ Note that all the following benchmark should be run inside `.integration/` folde
 ## Benchmark
 
 To run benchmark for `n`-input-`n`-output DPC transaction, first go to file `./dpc/src/testnet2/instantiated.rs`, Line `80-81`:
+
 ```rust
-    const NUM_INPUT_RECORDS: usize = 2; # change this to 2,3,4
-    const NUM_OUTPUT_RECORDS: usize = 2; # change this to 2,3,4
+    // You can change the following constants to different transaction dimensions.
+    // Currently set to 2x2 transactions.
+    // E.g. you can change both configs to 3 for 3x3 transactions.
+    const NUM_INPUT_RECORDS: usize = 2;
+    const NUM_OUTPUT_RECORDS: usize = 2;
 ```
 
 ### Time & Space complexity
@@ -24,6 +28,7 @@ cargo test dpc_testnet2_integration_test --release -- --nocapture
 ```
 
 You should see some command line log:
+
 ```
 running 1 test
 ℹ️️ universal_srs size for programs: 20487058 bytes
